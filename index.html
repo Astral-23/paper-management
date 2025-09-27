@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>論文管理システム</title>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
+        integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3NU" crossorigin="anonymous">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"
+        integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUbKyIyuh"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked-katex-extension/lib/index.umd.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* --- テーマ変数の定義 --- */
+        html[data-theme='light'] {
+            --background: #f8fafc; /* slate-50 */
+            --foreground: #020617; /* slate-950 */
+            --card-background: #ffffff;
+            --card-hover-background: #f1f5f9; /* slate-100 */
+            --border-color: #e2e8f0; /* slate-200 */
+            --input-background: #ffffff;
+            --input-border-color: #cbd5e1; /* slate-300 */
+            --primary-color: #4f46e5; /* indigo-600 */
+            --primary-hover-color: #4338ca; /* indigo-700 */
+            --muted-foreground: #64748b; /* slate-500 */
+            --card-read-background: #eef2ff; /* indigo-50 */
+            --card-read-foreground: #3730a3; /* indigo-800 */
+            --card-read-muted: #6366f1; /* indigo-500 */
+            --card-toread-background: #fefce8; /* yellow-50 */
+            --card-toread-foreground: #854d0e; /* yellow-800 */
+            --card-toread-muted: #ca8a04; /* yellow-500 */
+            --card-skimmed-background: #f0f9ff; /* sky-50 */
+            --card-skimmed-foreground: #075985; /* sky-800 */
+            --card-skimmed-muted: #0ea5e9; /* sky-500 */
+        }
+        
+        html[data-theme='metallic'] {
+            --background: #d1d5db; /* gray-300 */
+            --foreground: #111827; /* gray-900 */
+            --card-background: linear-gradient(145deg, #e5e7eb, #d1d5db);
+            --card-hover-background: linear-gradient(145deg, #f3f4f6, #e5e7eb);
+            --border-color: #9ca3af; /* gray-400 */
+            --input-background: #e5e7eb;
+            --input-border-color: #9ca3af;
+            --primary-color: #1d4ed8; /* blue-700 */
+            --primary-hover-color: #1e40af; /* blue-800 */
+            --muted-foreground: #4b5563; /* gray-600 */
+            --card-read-background: #dbeafe; /* blue-100 */
+            --card-read-foreground: #1e3a8a; /* blue-800 */
+            --card-read-muted: #2563eb; /* blue-600 */
+            --card-toread-background: #fef3c7; /* amber-100 */
+            --card-toread-foreground: #78350f; /* amber-900 */
+            --card-toread-muted: #b45309; /* amber-600 */
+            --card-skimmed-background: #e0f2fe; /* sky-100 */
+            --card-skimmed-foreground: #0c4a6e; /* sky-900 */
+            --card-skimmed-muted: #0369a1; /* sky-600 */
+        }
+
+        html[data-theme='snow'] {
+            --background: #f7faff;
+            --foreground: #334155; /* slate-700 */
+            --card-background: #ffffff;
+            --card-hover-background: #f0f8ff;
+            --border-color: #dbeafe; /* blue-200 */
+            --input-background: #ffffff;
+            --input-border-color: #93c5fd; /* blue-300 */
+            --primary-color: #3b82f6; /* blue-500 */
+            --primary-hover-color: #2563eb; /* blue-600 */
+            --muted-foreground: #64748b; /* slate-500 */
+            --card-read-background: #eff6ff; /* blue-50 */
+            --card-read-foreground: #1e40af; /* blue-800 */
+            --card-read-muted: #3b82f6; /* blue-500 */
+            --card-toread-background: #fefce8; /* yellow-50 */
+            --card-toread-foreground: #854d0e; /* yellow-800 */
+            --card-toread-muted: #ca8a04; /* yellow-500 */
+            --card-skimmed-background: #f0f9ff; /* sky-50 */
+            --card-skimmed-foreground: #075985; /* sky-800 */
+            --card-skimmed-muted: #0ea5e9; /* sky-500 */
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background);
+            color: var(--foreground);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .paper-card.is-read { background: var(--card-read-background); color: var(--card-read-foreground); }
+        .paper-card.is-read p, .paper-card.is-read span { color: var(--card-read-foreground) !important; }
+        .paper-card.is-read .text-\[\--muted-foreground\] { color: var(--card-read-muted) !important; }
+        .paper-card.is-read a { color: var(--card-read-foreground) !important; text-decoration: underline; }
+        .paper-card.is-read svg { color: var(--card-read-muted) !important; }
+        
+        .paper-card.is-to-read { background: var(--card-toread-background); color: var(--card-toread-foreground); border-color: var(--card-toread-muted) !important; }
+        .paper-card.is-to-read p, .paper-card.is-to-read span { color: var(--card-toread-foreground) !important; }
+        .paper-card.is-to-read .text-\[\--muted-foreground\] { color: var(--card-toread-muted) !important; }
+        .paper-card.is-to-read a { color: var(--card-toread-foreground) !important; text-decoration: underline; }
+        .paper-card.is-to-read svg { color: var(--card-toread-muted) !important; }
+
+        .paper-card.is-skimmed { background: var(--card-skimmed-background); color: var(--card-skimmed-foreground); }
+        .paper-card.is-skimmed p, .paper-card.is-skimmed span { color: var(--card-skimmed-foreground) !important; }
+        .paper-card.is-skimmed .text-\[\--muted-foreground\] { color: var(--card-skimmed-muted) !important; }
+        .paper-card.is-skimmed a { color: var(--card-skimmed-foreground) !important; text-decoration: underline; }
+        .paper-card.is-skimmed svg { color: var(--card-skimmed-muted) !important; }
+
+        .category-heading {
+            margin-top: 2rem;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border-color);
+            color: var(--foreground);
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+        .category-heading:first-of-type {
+            margin-top: 0;
+        }
+        
+        .loader {
+            border: 4px solid var(--border-color); border-top: 4px solid var(--primary-color);
+            border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .toast {
+            visibility: hidden; min-width: 250px; margin-left: -125px; color: #fff;
+            text-align: center; border-radius: 8px; padding: 16px; position: fixed;
+            z-index: 100; left: 50%; bottom: 30px; opacity: 0;
+            transition: visibility 0s, opacity 0.5s linear, transform 0.3s ease-out;
+            transform: translateY(20px);
+        }
+        .toast.show { visibility: visible; opacity: 1; transform: translateY(0); }
+        .admin-only { display: none; }
+
+        .skeleton-card {
+            background-color: var(--card-background); border: 1px solid var(--border-color);
+            border-radius: 0.75rem; padding: 1rem;
+        }
+        .skeleton {
+            opacity: 0.7; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            background-color: var(--muted-foreground); border-radius: 0.25rem;
+        }
+        @keyframes pulse {
+            50% { opacity: .5; }
+        }
+    </style>
+</head>
+
+<body class="antialiased">
+
+    <div id="auth-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <div class="bg-[var(--card-background)] rounded-xl shadow-2xl w-full max-w-md border border-[var(--border-color)]">
+            <div class="p-4 border-b border-[var(--border-color)] flex justify-between items-center">
+                <h3 class="text-lg font-bold text-[var(--foreground)]">管理者ログイン</h3>
+                <button id="close-auth-modal-btn" class="text-[var(--muted-foreground)] hover:text-[var(--foreground)] text-2xl font-bold">&times;</button>
+            </div>
+            <div class="p-6">
+                <form id="login-form" class="space-y-6">
+                    <div class="rounded-md -space-y-px">
+                        <input id="email-address" name="email" type="email" autocomplete="email" required
+                            class="appearance-none rounded-t-md relative block w-full px-3 py-2 bg-[var(--input-background)] border border-[var(--input-border-color)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)] focus:z-10 sm:text-sm"
+                            placeholder="メールアドレス">
+                        <input id="password" name="password" type="password" autocomplete="current-password" required
+                            class="appearance-none rounded-b-md relative block w-full px-3 py-2 bg-[var(--input-background)] border border-[var(--input-border-color)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)] focus:z-10 sm:text-sm"
+                            placeholder="パスワード">
+                    </div>
+                    <div id="auth-error" class="text-red-500 text-sm hidden"></div>
+                    <button type="submit"
+                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-[var(--primary-color)] hover:bg-[var(--primary-hover-color)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--primary-color)] transition-colors">
+                        ログイン
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <div id="note-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <div class="bg-[var(--card-background)] border border-[var(--border-color)] rounded-xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col">
+            <div class="p-4 border-b border-[var(--border-color)] flex justify-between items-center flex-shrink-0">
+                <h3 class="text-lg font-bold truncate pr-4" id="note-modal-title">メモを編集</h3>
+                <button id="close-modal-btn" class="text-[var(--muted-foreground)] hover:text-[var(--foreground)] text-2xl font-bold">&times;</button>
+            </div>
+            <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 overflow-hidden">
+                <div class="flex flex-col h-full">
+                    <label for="note-editor" class="text-sm font-medium mb-2 text-[var(--muted-foreground)]">Markdownエディタ</label>
+                    <textarea id="note-editor" class="w-full flex-1 p-2 bg-[var(--input-background)] border border-[var(--input-border-color)] rounded-md resize-none font-mono text-sm focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)]" placeholder="ここにMarkdownでメモを入力..."></textarea>
+                </div>
+                <div class="flex flex-col h-full">
+                    <label class="text-sm font-medium mb-2 text-[var(--muted-foreground)]">プレビュー</label>
+                    <div id="note-preview" class="w-full flex-1 p-3 border border-[var(--border-color)] rounded-md overflow-y-auto prose prose-sm max-w-none"></div>
+                </div>
+            </div>
+            <div class="p-4 bg-[var(--background)] border-t border-[var(--border-color)] flex justify-end space-x-2 flex-shrink-0 rounded-b-xl">
+                <button id="cancel-note-btn" class="px-4 py-2 bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors">キャンセル</button>
+                <button id="save-note-btn" class="px-4 py-2 bg-[var(--primary-color)] text-white rounded-md hover:bg-[var(--primary-hover-color)] transition-colors">保存する</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="edit-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <div class="bg-[var(--card-background)] rounded-xl shadow-2xl w-full max-w-2xl flex flex-col border border-[var(--border-color)]">
+            <div class="p-4 border-b border-[var(--border-color)] flex justify-between items-center">
+                <h3 class="text-lg font-bold" id="edit-modal-title">論文情報を編集</h3>
+                <button id="close-edit-modal-btn" class="text-[var(--muted-foreground)] hover:text-[var(--foreground)] text-2xl font-bold">&times;</button>
+            </div>
+            <div class="p-6 space-y-4 overflow-y-auto" style="max-height: 70vh;">
+                <form id="edit-paper-form" class="space-y-4">
+                    <div>
+                        <label for="edit-title" class="block text-sm font-medium text-[var(--muted-foreground)] mb-1">タイトル <span class="text-red-500">*</span></label>
+                        <input type="text" id="edit-title" class="w-full px-3 py-2 bg-[var(--input-background)] border border-[var(--input-border-color)] rounded-md shadow-sm focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)]" required>
+                    </div>
+                    <div>
+                        <label for="edit-authors" class="block text-sm font-medium text-[var(--muted-foreground)] mb-1">著者 (カンマ区切り)</label>
+                        <input type="text" id="edit-authors" class="w-full px-3 py-2 bg-[var(--input-background)] border border-[var(--input-border-color)] rounded-md shadow-sm focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)]">
+                    </div>
+                    <div>
+                        <label for="edit-url" class="block text-sm font-medium text-[var(--muted-foreground)] mb-1">URL</label>
+                        <input type="url" id="edit-url" class="w-full px-3 py-2 bg-[var(--input-background)] border border-[var(--input-border-color)] rounded-md shadow-sm focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)]">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="edit-year" class="block text-sm font-medium text-[var(--muted-foreground)] mb-1">発行年</label>
+                            <input type="number" id="edit-year" class="w-full px-3 py-2 bg-[var(--input-background)] border border-[var(--input-border-color)] rounded-md shadow-sm focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)]">
+                        </div>
+                        <div>
+                            <label for="edit-citations" class="block text-sm font-medium text-[var(--muted-foreground)] mb-1">被引用数</label>
+                            <input type="number" id="edit-citations" class="w-full px-3 py-2 bg-[var(--input-background)] border border-[var(--input-border-color)] rounded-md shadow-sm focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)]">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="edit-category" class="block text-sm font-medium text-[var(--muted-foreground)] mb-1">カテゴリ</label>
+                        <input type="text" id="edit-category" class="w-full px-3 py-2 bg-[var(--input-background)] border border-[var(--input-border-color)] rounded-md shadow-sm focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)]">
+                    </div>
+                </form>
+            </div>
+            <div class="p-4 bg-[var(--background)] border-t border-[var(--border-color)] flex justify-end space-x-2 rounded-b-xl">
+                <button id="cancel-edit-btn" class="px-4 py-2 bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors">キャンセル</button>
+                <button id="save-edit-btn" class="px-4 py-2 bg-[var(--primary-color)] text-white rounded-md hover:bg-[var(--primary-hover-color)] transition-colors">変更を保存</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="mb-8 flex justify-between items-center pb-4 border-b border-[var(--border-color)] transition-colors">
+            <div class="flex items-center space-x-3">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-8 h-8 text-[var(--primary-color)] transition-colors">
+                    <path d="M11.25 4.533A9.707 9.707 0 006 3a9.735 9.735 0 00-3.25.555.75.75 0 00-.5.707v14.5a.75.75 0 00.5.707A9.735 9.735 0 006 21a9.707 9.707 0 005.25-1.533.75.75 0 00.5-1.332V5.865a.75.75 0 00-.5-1.332z" />
+                    <path d="M12.75 4.533A9.707 9.707 0 0118 3a9.735 9.735 0 013.25.555.75.75 0 01.5.707v14.5a.75.75 0 01-.5.707A9.735 9.735 0 0118 21a9.707 9.707 0 01-5.25-1.533.75.75 0 01-.5-1.332V5.865a.75.75 0 01.5-1.332z" />
+                </svg>
+                <h1 class="text-3xl md:text-4xl font-extrabold text-[var(--foreground)] tracking-tight">論文管理システム</h1>
+            </div>
+            <div class="flex items-center space-x-2">
+                <div id="theme-switcher" class="relative">
+                    <button id="theme-menu-button" class="p-2 rounded-full hover:bg-[var(--card-hover-background)] text-[var(--muted-foreground)] transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="M10 3a1.5 1.5 0 110 3 1.5 1.5 0 010-3zM10 8.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zM11.5 15.5a1.5 1.5 0 10-3 0 1.5 1.5 0 003 0z" /></svg>
+                    </button>
+                    <div id="theme-menu" class="absolute right-0 mt-2 w-36 origin-top-right rounded-md bg-[var(--card-background)] shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none hidden z-10 border border-[var(--border-color)]">
+                        <div class="py-1" role="none">
+                            <a href="#" class="theme-option" data-theme="light">Light</a>
+                            <a href="#" class="theme-option" data-theme="snow">Snow</a>
+                            <a href="#" class="theme-option" data-theme="metallic">Metallic</a>
+                        </div>
+                    </div>
+                </div>
+                <style>
+                    .theme-option {
+                        color: var(--foreground); display: block; padding: 8px 16px; font-size: 14px;
+                    }
+                    .theme-option:hover {
+                        background-color: var(--card-hover-background);
+                    }
+                    .theme-option.active {
+                        font-weight: 600; color: var(--primary-color);
+                    }
+                </style>
+                <button id="login-btn" class="bg-[var(--primary-color)] hover:bg-[var(--primary-hover-color)] text-white font-bold py-2 px-4 rounded-lg transition-colors">管理者ログイン</button>
+                <button id="logout-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors hidden">ログアウト</button>
+            </div>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <aside class="lg:col-span-1 admin-only">
+                <div class="bg-[var(--card-background)] border border-[var(--border-color)] p-6 rounded-xl shadow-sm sticky top-8 transition-colors" style="background: var(--card-background)">
+                    <h2 class="text-xl font-bold mb-4" id="form-title">論文を追加</h2>
+                    <form id="paper-form" autocomplete="off" class="space-y-4">
+                        <div>
+                            <label for="paper-title" class="block text-sm font-medium text-[var(--muted-foreground)] mb-1">タイトルまたはURL <span class="text-red-500">*</span></label>
+                            <div class="flex items-center space-x-2">
+                                <input type="text" id="paper-title" class="w-full px-3 py-2 bg-[var(--input-background)] border border-[var(--input-border-color)] rounded-md shadow-sm focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)]" placeholder="論文のタイトルやURLを入力..." required>
+                                <button type="button" id="autocomplete-btn" title="入力された情報から論文データを自動補完します" class="p-2 bg-[var(--primary-color)]/10 text-[var(--primary-color)] rounded-md hover:bg-[var(--primary-color)]/20 flex-shrink-0 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" /></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="paper-authors" class="block text-sm font-medium text-[var(--muted-foreground)] mb-1">著者 (カンマ区切り)</label>
+                            <input type="text" id="paper-authors" class="w-full px-3 py-2 bg-[var(--input-background)] border border-[var(--input-border-color)] rounded-md shadow-sm focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)]">
+                        </div>
+                        <div>
+                            <label for="paper-url-display" class="block text-sm font-medium text-[var(--muted-foreground)] mb-1">URL</label>
+                            <input type="url" id="paper-url-display" class="w-full px-3 py-2 bg-[var(--input-background)] border border-[var(--input-border-color)] rounded-md shadow-sm focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)]">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="paper-year" class="block text-sm font-medium text-[var(--muted-foreground)] mb-1">発行年</label>
+                                <input type="number" id="paper-year" class="w-full px-3 py-2 bg-[var(--input-background)] border border-[var(--input-border-color)] rounded-md shadow-sm focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)]">
+                            </div>
+                            <div>
+                                <label for="paper-citations" class="block text-sm font-medium text-[var(--muted-foreground)] mb-1">被引用数</label>
+                                <input type="number" id="paper-citations" class="w-full px-3 py-2 bg-[var(--input-background)] border border-[var(--input-border-color)] rounded-md shadow-sm focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)]">
+                            </div>
+                        </div>
+                        <hr class="border-[var(--border-color)] pt-4"/>
+                        <div>
+                            <label for="paper-category" class="block text-sm font-medium text-[var(--muted-foreground)] mb-1">カテゴリ</label>
+                            <input type="text" id="paper-category" name="paper-category" class="w-full px-3 py-2 bg-[var(--input-background)] border border-[var(--input-border-color)] rounded-md shadow-sm focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)]" placeholder="例: 強化学習">
+                        </div>
+                        <div>
+                            <label for="paper-note" class="block text-sm font-medium text-[var(--muted-foreground)] mb-1">メモ (簡易)</label>
+                            <textarea id="paper-note" name="paper-note" rows="3" class="w-full px-3 py-2 bg-[var(--input-background)] border border-[var(--input-border-color)] rounded-md shadow-sm focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)]" placeholder="簡単なメモはこちらに..."></textarea>
+                        </div>
+                        <button type="submit" id="add-paper-btn" class="mt-6 w-full bg-[var(--primary-color)] text-white font-semibold py-2.5 px-4 rounded-lg hover:bg-[var(--primary-hover-color)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--primary-color)] focus:ring-offset-[var(--background)] flex items-center justify-center transition-all duration-200">
+                            <span id="btn-text">追加する</span>
+                            <div id="btn-loader" class="loader !border-t-white !w-5 !h-5 hidden"></div>
+                        </button>
+                    </form>
+                </div>
+            </aside>
+            <div class="lg:col-span-2">
+                <div class="mb-6 flex items-center gap-4 flex-wrap">
+                    <div class="inline-flex rounded-lg shadow-sm border border-[var(--border-color)]">
+                        <button id="filter-all" class="filter-btn">すべて</button>
+                        <button id="filter-to-read" class="filter-btn">優先</button>
+                        <button id="filter-unread" class="filter-btn">未読</button>
+                        <button id="filter-skimmed" class="filter-btn">流し読み</button>
+                        <button id="filter-read" class="filter-btn">既読</button>
+                    </div>
+                    <select id="category-filter" class="rounded-lg bg-[var(--input-background)] border-[var(--input-border-color)] shadow-sm focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)]"></select>
+                </div>
+                <section id="papers-container">
+                    <div id="skeleton-loader">
+                        <div class="skeleton-card space-y-4">
+                            <div class="skeleton h-5 w-3/4"></div>
+                            <div class="skeleton h-4 w-1/2"></div>
+                            <div class="flex space-x-4"><div class="skeleton h-4 w-1/4"></div><div class="skeleton h-4 w-1/4"></div></div>
+                        </div>
+                        <div class="skeleton-card space-y-4 mt-4">
+                            <div class="skeleton h-5 w-4/5"></div>
+                            <div class="skeleton h-4 w-2/3"></div>
+                            <div class="flex space-x-4"><div class="skeleton h-4 w-1/4"></div><div class="skeleton h-4 w-1/4"></div></div>
+                        </div>
+                    </div>
+                    <div id="empty-state" class="hidden text-center py-16 px-6 border-2 border-dashed border-[var(--border-color)] rounded-xl">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-12 h-12 mx-auto text-[var(--muted-foreground)]"><path fill-rule="evenodd" d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0016.5 9h-1.875a.375.375 0 01-.375-.375V6.75A3.75 3.75 0 0010.5 3H5.625zM7.5 15a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5A.75.75 0 017.5 15zm.75 2.25a.75.75 0 000 1.5H12a.75.75 0 000-1.5H8.25z" clip-rule="evenodd" /></svg>
+                        <h3 class="mt-4 text-lg font-semibold">対象の論文はありません</h3><p class="mt-1 text-sm text-[var(--muted-foreground)]">論文を追加するか、フィルター条件を変更してください。</p>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="/__/firebase/8.10.1/firebase-app.js"></script>
+    <script src="/__/firebase/8.10.1/firebase-auth.js"></script>
+    <script src="/__/firebase/8.10.1/firebase-firestore.js"></script>
+    <script src="/__/firebase/init.js"></script>
+    <script>
+        // --- テーマ切り替えロジック ---
+        const themeMenuButton = document.getElementById('theme-menu-button');
+        const themeMenu = document.getElementById('theme-menu');
+        const themeOptions = document.querySelectorAll('.theme-option');
+
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            themeOptions.forEach(opt => {
+                opt.classList.toggle('active', opt.dataset.theme === theme);
+            });
+        }
+
+        themeMenuButton.addEventListener('click', () => themeMenu.classList.toggle('hidden'));
+
+        themeOptions.forEach(option => {
+            option.addEventListener('click', (e) => {
+                e.preventDefault();
+                applyTheme(e.target.dataset.theme);
+                themeMenu.classList.add('hidden');
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!themeMenuButton.contains(e.target) && !themeMenu.contains(e.target)) {
+                themeMenu.classList.add('hidden');
+            }
+        });
+        
+        applyTheme(localStorage.getItem('theme') || 'light');
+
+        // --- Firebase & App Logic ---
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Element Getters
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const authModal = document.getElementById('auth-modal');
+        const closeAuthModalBtn = document.getElementById('close-auth-modal-btn');
+        const loginForm = document.getElementById('login-form');
+        const authErrorDiv = document.getElementById('auth-error');
+        const paperForm = document.getElementById('paper-form');
+        const papersContainer = document.getElementById('papers-container');
+        const addBtn = document.getElementById('add-paper-btn');
+        const btnText = document.getElementById('btn-text');
+        const btnLoader = document.getElementById('btn-loader');
+        const toast = document.getElementById('toast');
+        const filterAllBtn = document.getElementById('filter-all');
+        const filterReadBtn = document.getElementById('filter-read');
+        const filterUnreadBtn = document.getElementById('filter-unread');
+        const filterToReadBtn = document.getElementById('filter-to-read');
+        const filterSkimmedBtn = document.getElementById('filter-skimmed');
+        const categoryFilterSelect = document.getElementById('category-filter');
+        const noteModal = document.getElementById('note-modal');
+        const noteModalTitle = document.getElementById('note-modal-title');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const noteEditor = document.getElementById('note-editor');
+        const notePreview = document.getElementById('note-preview');
+        const cancelNoteBtn = document.getElementById('cancel-note-btn');
+        const saveNoteBtn = document.getElementById('save-note-btn');
+        const paperTitleInput = document.getElementById('paper-title');
+        const autocompleteBtn = document.getElementById('autocomplete-btn');
+        const paperAuthorsInput = document.getElementById('paper-authors');
+        const paperUrlDisplayInput = document.getElementById('paper-url-display');
+        const paperYearInput = document.getElementById('paper-year');
+        const paperCitationsInput = document.getElementById('paper-citations');
+        const paperCategoryInput = document.getElementById('paper-category');
+        const paperNoteInput = document.getElementById('paper-note');
+        const editModal = document.getElementById('edit-modal');
+        const closeEditModalBtn = document.getElementById('close-edit-modal-btn');
+        const editPaperForm = document.getElementById('edit-paper-form');
+        const saveEditBtn = document.getElementById('save-edit-btn');
+        const cancelEditBtn = document.getElementById('cancel-edit-btn');
+        const editTitleInput = document.getElementById('edit-title');
+        const editAuthorsInput = document.getElementById('edit-authors');
+        const editUrlInput = document.getElementById('edit-url');
+        const editYearInput = document.getElementById('edit-year');
+        const editCitationsInput = document.getElementById('edit-citations');
+        const editCategoryInput = document.getElementById('edit-category');
+        const skeletonLoader = document.getElementById('skeleton-loader');
+        const emptyState = document.getElementById('empty-state');
+        
+        // App State
+        let currentEditingPaperId = null;
+        let papers = [];
+        let currentStatusFilter = 'all';
+        let currentCategoryFilter = 'all';
+        let initialLoad = true;
+        const STATUS_CYCLE = ['unread', 'to-read', 'skimmed', 'read'];
+
+        marked.use(markedKatex({ throwOnError: false }));
+
+        auth.onAuthStateChanged((user) => {
+            const adminElements = document.querySelectorAll('.admin-only');
+            if (user) {
+                loginBtn.classList.add('hidden');
+                logoutBtn.classList.remove('hidden');
+                adminElements.forEach(el => {
+                    if (el.tagName === 'ASIDE') { el.style.display = 'block'; }
+                    else { el.style.display = 'flex'; }
+                });
+            } else {
+                loginBtn.classList.remove('hidden');
+                logoutBtn.classList.add('hidden');
+                adminElements.forEach(el => el.style.display = 'none');
+            }
+        });
+
+        function startDataListening() {
+            const q = db.collection('papers').orderBy("createdAt", "desc");
+            q.onSnapshot((snapshot) => {
+                if (initialLoad) {
+                    skeletonLoader.style.display = 'none';
+                    initialLoad = false;
+                }
+                papers = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    if (!data.status) {
+                        data.status = data.read ? 'read' : 'unread';
+                    }
+                    return { id: doc.id, ...data };
+                });
+                renderPapers();
+            }, (error) => {
+                console.error("Error fetching papers: ", error);
+                skeletonLoader.style.display = 'none';
+                papersContainer.innerHTML = `<div class="text-center py-12"><h3 class="text-sm font-medium text-red-500">データの読み込みに失敗しました</h3></div>`;
+            });
+        }
+        
+        const ARXIV_ID_REGEX = /(\d{4}\.\d{4,5}(v\d+)?|[a-zA-Z-]+(?:\.[a-zA-Z-]+)?\/\d{7})/;
+        
+        function formatTimestamp(timestamp) {
+            if (!timestamp || typeof timestamp.toDate !== 'function') { return ''; }
+            const date = timestamp.toDate();
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        }
+
+        async function fetchPaperDataByArxivId(paperId) {
+            const apiUrl = `https://api.semanticscholar.org/graph/v1/paper/ARXIV:${paperId}?fields=title,year,authors,citationCount,url`;
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error(`API error: ${response.statusText}`);
+                return await response.json();
+            } catch (error) {
+                console.error('Failed to fetch paper data by ArXiv ID:', error);
+                return null;
+            }
+        }
+
+        async function searchAndFetchPaperDataByQuery(query) {
+            const searchApiUrl = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&limit=1&fields=title,year,authors,citationCount,url`;
+            try {
+                const response = await fetch(searchApiUrl);
+                if (!response.ok) throw new Error(`API error: ${response.statusText}`);
+                const result = await response.json();
+                if (result.total > 0 && result.data.length > 0) { return result.data[0]; }
+                return null;
+            } catch (error) {
+                console.error('Failed to search paper data:', error);
+                return null;
+            }
+        }
+
+        function renderPapers() {
+            updateCategoryFilterOptions();
+            
+            let filteredPapers = papers;
+            if (currentStatusFilter !== 'all') {
+                filteredPapers = papers.filter(p => p.status === currentStatusFilter);
+            }
+            if (currentCategoryFilter !== 'all') {
+                filteredPapers = filteredPapers.filter(p => (p.category || '未分類') === currentCategoryFilter);
+            }
+
+            papersContainer.innerHTML = ''; 
+
+            if (filteredPapers.length === 0 && !initialLoad) {
+                papersContainer.appendChild(emptyState);
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+            
+            const groupedPapers = filteredPapers.reduce((acc, paper) => {
+                const category = paper.category || '未分類';
+                if (!acc[category]) {
+                    acc[category] = [];
+                }
+                acc[category].push(paper);
+                return acc;
+            }, {});
+
+            const sortedCategories = Object.keys(groupedPapers).sort();
+            
+            sortedCategories.forEach(category => {
+                const categoryHeading = document.createElement('h2');
+                categoryHeading.className = 'category-heading';
+                categoryHeading.textContent = category;
+                papersContainer.appendChild(categoryHeading);
+
+                const categoryContainer = document.createElement('div');
+                categoryContainer.className = 'space-y-4';
+
+                groupedPapers[category].forEach(paper => {
+                    const card = document.createElement('div');
+                    const statusClassMap = { read: 'is-read', skimmed: 'is-skimmed', 'to-read': 'is-to-read' };
+                    const statusClass = statusClassMap[paper.status] || '';
+                    card.className = `paper-card group p-4 rounded-xl transition-all duration-300 border ${statusClass ? statusClass : 'border-[var(--border-color)] bg-[var(--card-background)] hover:bg-[var(--card-hover-background)]'}`;
+                    
+                    if (!statusClass) { card.style.background = 'var(--card-background)'; }
+
+                    const linkOrTitle = paper.url ? `<a href="${paper.url}" target="_blank" rel="noopener noreferrer" class="font-bold hover:underline">${paper.title}</a>` : `<span class="font-bold">${paper.title}</span>`;
+                    const authorsText = (paper.authors && paper.authors.length > 0) ? paper.authors.map(a => a.name).join(', ') : '著者不明';
+                    const noteHTML = paper.note ? marked.parse(paper.note) : '';
+
+                    const statusConfig = {
+                        'unread': { title: '「優先」に設定', color: 'text-[var(--muted-foreground)] hover:text-yellow-500'},
+                        'to-read': { title: '「流し読み」に設定', color: 'text-yellow-500 hover:text-sky-500'},
+                        'skimmed': { title: '「既読」に設定', color: 'text-sky-500 hover:text-green-500'},
+                        'read': { title: '「未読」に戻す', color: 'text-green-500 hover:text-[var(--muted-foreground)]'}
+                    };
+                    const currentStatus = paper.status || 'unread';
+                    const config = statusConfig[currentStatus];
+                    const statusBtnHTML = `<button class="p-1.5 rounded-md ${config.color} hover:bg-black/5 dark:hover:bg-white/10" onclick="window.changePaperStatus('${paper.id}')" title="${config.title}"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg></button>`;
+
+                    card.innerHTML = `
+                        <div class="flex items-start justify-between relative">
+                            <div class="flex-1 pr-4 min-w-0">
+                                <div class="mb-1.5">${linkOrTitle}</div>
+                                <p class="text-sm text-[--muted-foreground] truncate" title="${authorsText}">${authorsText}</p>
+                                <div class="text-xs text-[--muted-foreground] mt-2 flex items-center flex-wrap gap-x-4 gap-y-1">
+                                    <span class="inline-flex items-center"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3.5 h-3.5 mr-1"><path fill-rule="evenodd" d="M3.5 2A1.5 1.5 0 0 0 2 3.5v9A1.5 1.5 0 0 0 3.5 14h9a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 12.5 2h-9ZM9.75 9.25a.75.75 0 0 0 0-1.5h-3.5a.75.75 0 0 0 0 1.5h3.5Z" clip-rule="evenodd" /></svg>${paper.year || 'N/A'}</span> 
+                                    <span class="inline-flex items-center"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3.5 h-3.5 mr-1"><path d="M2.5 3.5A1.5 1.5 0 0 1 4 2h3.25a.75.75 0 0 1 0 1.5H4a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V8.75a.75.75 0 0 1 1.5 0V12a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 2.5 12v-8.5Z" /><path d="M7.25 5a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0V5.914l-4.72 4.72a.75.75 0 0 1-1.06-1.06L11.586 5H8a.75.75 0 0 1-.75-.75Z" /></svg>${paper.citationCount ?? 'N/A'}</span>
+                                    ${ (paper.status === 'read' && paper.readAt) ? `<span class="inline-flex items-center"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3.5 h-3.5 mr-1"><path fill-rule="evenodd" d="M14 2.5a.5.5 0 0 0-.5-.5h-11a.5.5 0 0 0-.5.5v11a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5v-11ZM3 4h10V3H3v1Zm0 1.5h10V13H3V5.5Z" clip-rule="evenodd" /></svg>${formatTimestamp(paper.readAt)}</span>` : ''}
+                                </div>
+                            </div>
+                            <div class="admin-only absolute top-[-4px] right-[-4px] flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[var(--card-hover-background)] p-1 rounded-lg border border-[var(--border-color)]">
+                                ${statusBtnHTML}
+                                <button class="p-1.5 rounded-md text-[var(--muted-foreground)] hover:bg-black/5 dark:hover:bg-white/10 hover:text-blue-500" onclick="window.openEditModal('${paper.id}')" title="論文情報を編集"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z" /><path fill-rule="evenodd" d="M3.5 17.5c0-1.036.84-1.875 1.875-1.875h10.375a1.875 1.875 0 010 3.75H5.375A1.875 1.875 0 013.5 17.5z" clip-rule="evenodd" /></svg></button>
+                                <button class="p-1.5 rounded-md text-[var(--muted-foreground)] hover:bg-black/5 dark:hover:bg-white/10 hover:text-indigo-500" onclick="window.openNoteEditor('${paper.id}')" title="メモを編集"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3.75 5.25a.75.75 0 01.75-.75h11.5a.75.75 0 010 1.5H4.5a.75.75 0 01-.75-.75zm0 5a.75.75 0 01.75-.75h11.5a.75.75 0 010 1.5H4.5a.75.75 0 01-.75-.75zm0 5a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5a.75.75 0 01-.75-.75z" clip-rule="evenodd" /></svg></button>
+                                <button class="p-1.5 rounded-md text-[var(--muted-foreground)] hover:bg-black/5 dark:hover:bg-white/10 hover:text-red-500" onclick="window.deletePaper('${paper.id}')" title="削除"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clip-rule="evenodd" /></svg></button>
+                            </div>
+                        </div>
+                        ${noteHTML ? `<div class="mt-3 pt-3 border-t border-[var(--border-color)] text-sm prose prose-sm max-w-none">${noteHTML}</div>` : ''}
+                    `;
+                    categoryContainer.appendChild(card);
+                });
+                papersContainer.appendChild(categoryContainer);
+            });
+            
+            const currentUser = auth.currentUser;
+            document.querySelectorAll('.admin-only').forEach(el => {
+                if(el.tagName === 'ASIDE') { el.style.display = currentUser ? 'block' : 'none'; }
+                else { el.style.display = currentUser ? 'flex' : 'none'; }
+            });
+        }
+        
+        window.deletePaper = async (paperId) => {
+            if (confirm('この論文を削除してもよろしいですか？')) {
+                try {
+                    await db.collection('papers').doc(paperId).delete();
+                    showToast('論文を削除しました', 'success');
+                } catch (e) { showToast('削除に失敗しました', 'error'); }
+            }
+        };
+
+        window.changePaperStatus = async (paperId) => {
+            const paper = papers.find(p => p.id === paperId);
+            if (!paper) return;
+
+            const currentStatus = paper.status || 'unread';
+
+            if (currentStatus === 'read') {
+                if (!confirm('この論文を「未読」に戻しますか？')) {
+                    return; 
+                }
+            }
+
+            const currentIndex = STATUS_CYCLE.indexOf(currentStatus);
+            const nextStatus = STATUS_CYCLE[(currentIndex + 1) % STATUS_CYCLE.length];
+
+            const updateData = { status: nextStatus };
+            if (nextStatus === 'read' && currentStatus !== 'read') {
+                updateData.readAt = firebase.firestore.FieldValue.serverTimestamp();
+            } else if (nextStatus !== 'read') {
+                updateData.readAt = null;
+            }
+            
+            try {
+                await db.collection('papers').doc(paperId).update(updateData);
+            } catch (e) {
+                showToast('ステータスの更新に失敗しました', 'error');
+            }
+        };
+        
+        window.openNoteEditor = (paperId) => {
+            currentEditingPaperId = paperId;
+            const paper = papers.find(p => p.id === paperId);
+            if (!paper) return;
+            noteModalTitle.textContent = `メモを編集: ${paper.title}`;
+            noteEditor.value = paper.note || '';
+            notePreview.innerHTML = marked.parse(paper.note || '');
+            noteModal.classList.remove('hidden');
+            noteModal.classList.add('flex');
+        };
+
+        const closeNoteEditor = () => {
+            noteModal.classList.add('hidden');
+            noteModal.classList.remove('flex');
+            currentEditingPaperId = null;
+        };
+
+        window.openEditModal = (paperId) => {
+            currentEditingPaperId = paperId;
+            const paper = papers.find(p => p.id === paperId);
+            if (!paper) return;
+            editTitleInput.value = paper.title || '';
+            editAuthorsInput.value = (paper.authors && paper.authors.length > 0) ? paper.authors.map(a => a.name).join(', ') : '';
+            editUrlInput.value = paper.url || '';
+            editYearInput.value = paper.year || '';
+            editCitationsInput.value = paper.citationCount ?? '';
+            editCategoryInput.value = paper.category || '';
+            editModal.classList.remove('hidden');
+            editModal.classList.add('flex');
+        };
+
+        const closeEditModal = () => {
+            editModal.classList.add('hidden');
+            editModal.classList.remove('flex');
+            currentEditingPaperId = null;
+            editPaperForm.reset();
+        };
+        
+        loginBtn.addEventListener('click', () => { authModal.classList.remove('hidden'); authModal.classList.add('flex'); });
+        closeAuthModalBtn.addEventListener('click', () => { authModal.classList.add('hidden'); authModal.classList.remove('flex'); });
+        logoutBtn.addEventListener('click', () => { auth.signOut(); });
+        
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = loginForm['email-address'].value;
+            const password = loginForm['password'].value;
+            try {
+                await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+                await auth.signInWithEmailAndPassword(email, password);
+                authErrorDiv.classList.add('hidden');
+                closeAuthModalBtn.click();
+            } catch (error) {
+                console.error("Login failed:", error);
+                authErrorDiv.textContent = 'メールアドレスまたはパスワードが間違っています。';
+                authErrorDiv.classList.remove('hidden');
+            }
+        });
+
+        autocompleteBtn.addEventListener('click', async () => {
+            const query = paperTitleInput.value.trim();
+            if (!query) { showToast('タイトルまたはURLを入力してください。', 'error'); return; }
+            let paperData = null;
+            const match = query.match(ARXIV_ID_REGEX);
+            if (match) {
+                const paperId = match[0].replace('.pdf', '');
+                paperData = await fetchPaperDataByArxivId(paperId);
+            } else {
+                paperData = await searchAndFetchPaperDataByQuery(query);
+            }
+            if (paperData) {
+                paperTitleInput.value = paperData.title || '';
+                paperAuthorsInput.value = (paperData.authors && paperData.authors.length > 0) ? paperData.authors.map(a => a.name).join(', ') : '';
+                paperUrlDisplayInput.value = paperData.url || '';
+                paperYearInput.value = paperData.year || '';
+                paperCitationsInput.value = paperData.citationCount ?? '';
+                showToast('論文情報を補完しました。', 'success');
+            } else {
+                showToast('論文情報が見つかりませんでした。', 'error');
+            }
+        });
+
+        paperForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            addBtn.disabled = true;
+            btnText.classList.add('hidden');
+            btnLoader.classList.remove('hidden');
+            try {
+                const title = paperTitleInput.value.trim();
+                if (!title) throw new Error('タイトルは必須です。');
+                
+                const newPaperData = {
+                    title: title,
+                    authors: paperAuthorsInput.value.trim().split(',').filter(Boolean).map(name => ({ name: name.trim() })),
+                    url: paperUrlDisplayInput.value.trim() || null,
+                    year: paperYearInput.value.trim() ? parseInt(paperYearInput.value, 10) : null,
+                    citationCount: paperCitationsInput.value.trim() ? parseInt(paperCitationsInput.value, 10) : null,
+                    category: paperCategoryInput.value.trim(),
+                    note: paperNoteInput.value.trim(),
+                    status: 'unread',
+                    readAt: null,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                await db.collection('papers').add(newPaperData);
+                showToast('論文を追加しました', 'success');
+                paperForm.reset();
+            } catch (error) {
+                showToast(error.message || '処理中にエラーが発生しました。', 'error');
+                console.error("Error adding document:", error);
+            } finally {
+                addBtn.disabled = false;
+                btnText.classList.remove('hidden');
+                btnLoader.classList.add('hidden');
+            }
+        });
+
+        noteEditor.addEventListener('input', () => { notePreview.innerHTML = marked.parse(noteEditor.value); });
+        
+        saveNoteBtn.addEventListener('click', async () => {
+            if (!currentEditingPaperId) return;
+            saveNoteBtn.disabled = true;
+            try {
+                await db.collection('papers').doc(currentEditingPaperId).update({ note: noteEditor.value });
+                showToast('メモを保存しました', 'success');
+                closeNoteEditor();
+            } catch (error) {
+                showToast('保存に失敗しました', 'error');
+            } finally { saveNoteBtn.disabled = false; }
+        });
+
+        closeModalBtn.addEventListener('click', closeNoteEditor);
+        cancelNoteBtn.addEventListener('click', closeNoteEditor);
+
+        saveEditBtn.addEventListener('click', async () => {
+            if (!currentEditingPaperId) return;
+            const updatedData = {
+                title: editTitleInput.value.trim(),
+                authors: editAuthorsInput.value.trim().split(',').filter(Boolean).map(name => ({ name: name.trim() })),
+                url: editUrlInput.value.trim(),
+                year: editYearInput.value.trim() ? parseInt(editYearInput.value, 10) : null,
+                citationCount: editCitationsInput.value.trim() ? parseInt(editCitationsInput.value, 10) : null,
+                category: editCategoryInput.value.trim()
+            };
+            if (!updatedData.title) { showToast('タイトルは必須です。', 'error'); return; }
+            saveEditBtn.disabled = true;
+            try {
+                await db.collection('papers').doc(currentEditingPaperId).update(updatedData);
+                showToast('論文情報を更新しました', 'success');
+                closeEditModal();
+            } catch (error) {
+                console.error("Failed to update paper:", error);
+                showToast('更新に失敗しました', 'error');
+            } finally { saveEditBtn.disabled = false; }
+        });
+        cancelEditBtn.addEventListener('click', closeEditModal);
+        closeEditModalBtn.addEventListener('click', closeEditModal);
+
+        function showToast(message, type = 'success') {
+            toast.textContent = message;
+            toast.className = `toast show ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`;
+            setTimeout(() => { toast.className = toast.className.replace('show', ''); }, 3000);
+        }
+        
+        function updateFilterButtons() {
+            const baseClass = 'filter-btn px-4 py-2 text-sm font-medium transition-colors focus:outline-none';
+            const activeClass = 'bg-[var(--primary-color)] text-white';
+            const inactiveClass = 'bg-[var(--card-background)] text-[var(--foreground)] hover:bg-[var(--card-hover-background)]';
+            
+            filterAllBtn.className = `${baseClass} rounded-l-md ${currentStatusFilter === 'all' ? activeClass : inactiveClass}`;
+            filterToReadBtn.className = `${baseClass} border-l border-[var(--border-color)] ${currentStatusFilter === 'to-read' ? activeClass : inactiveClass}`;
+            filterUnreadBtn.className = `${baseClass} border-l border-[var(--border-color)] ${currentStatusFilter === 'unread' ? activeClass : inactiveClass}`;
+            filterSkimmedBtn.className = `${baseClass} border-l border-[var(--border-color)] ${currentStatusFilter === 'skimmed' ? activeClass : inactiveClass}`;
+            filterReadBtn.className = `${baseClass} border-l border-[var(--border-color)] rounded-r-md ${currentStatusFilter === 'read' ? activeClass : inactiveClass}`;
+        }
+
+        function updateCategoryFilterOptions() {
+            const categories = [...new Set(papers.map(p => p.category).filter(Boolean))];
+            const prevValue = categoryFilterSelect.value;
+            categoryFilterSelect.innerHTML = '<option value="all">すべてのカテゴリ</option>';
+            categories.sort().forEach(category => {
+                const option = document.createElement('option');
+                option.value = category; option.textContent = category;
+                categoryFilterSelect.appendChild(option);
+            });
+            if (categories.includes(prevValue)) categoryFilterSelect.value = prevValue;
+        }
+        
+        filterAllBtn.addEventListener('click', () => { currentStatusFilter = 'all'; updateFilterButtons(); renderPapers(); });
+        filterReadBtn.addEventListener('click', () => { currentStatusFilter = 'read'; updateFilterButtons(); renderPapers(); });
+        filterUnreadBtn.addEventListener('click', () => { currentStatusFilter = 'unread'; updateFilterButtons(); renderPapers(); });
+        filterToReadBtn.addEventListener('click', () => { currentStatusFilter = 'to-read'; updateFilterButtons(); renderPapers(); });
+        filterSkimmedBtn.addEventListener('click', () => { currentStatusFilter = 'skimmed'; updateFilterButtons(); renderPapers(); });
+        categoryFilterSelect.addEventListener('change', (e) => { currentCategoryFilter = e.target.value; renderPapers(); });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            paperForm.reset(); 
+            updateFilterButtons();
+            startDataListening();
+        });
+    </script>
+</body>
+</html>
