@@ -14,6 +14,8 @@
         integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUbKyIyuh"
         crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked-katex-extension/lib/index.umd.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -202,7 +204,7 @@
             align-items: center;
         }
         
-        /* --- Category Stats --- */
+        /* --- Stats Card --- */
         .stat-card {
             background-color: var(--card-background);
             border: 1px solid var(--border-color);
@@ -455,7 +457,35 @@
             </main>
         </div>
 
-        <div id="other-page" class="hidden space-y-8">
+        <div id="other-page" class="hidden space-y-12">
+            <div id="key-achievements-wrapper">
+                <h3 class="text-xl font-bold mb-4">主要実績</h3>
+                <div id="key-achievements-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    </div>
+            </div>
+            <div id="detailed-stats-wrapper">
+                <h3 class="text-xl font-bold mb-4">詳細な統計</h3>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="bg-[var(--card-background)] p-4 rounded-xl border border-[var(--border-color)]">
+                         <h4 class="font-bold mb-2 text-center">月別読了論文数</h4>
+                        <canvas id="monthly-reads-chart"></canvas>
+                    </div>
+                    <div class="bg-[var(--card-background)] p-4 rounded-xl border border-[var(--border-color)]">
+                        <h4 class="font-bold mb-2 text-center">カテゴリ別読了数</h4>
+                        <div class="max-w-xs mx-auto">
+                           <canvas id="category-reads-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-[var(--card-background)] p-4 rounded-xl border border-[var(--border-color)]">
+                         <h4 class="font-bold mb-2 text-center">発表年の分布</h4>
+                        <canvas id="year-distribution-chart"></canvas>
+                    </div>
+                    <div class="bg-[var(--card-background)] p-4 rounded-xl border border-[var(--border-color)]">
+                        <h4 class="font-bold mb-2 text-center">読了論文 著者ランキング Top 10</h4>
+                        <div id="top-authors-container" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
             <div id="contribution-graph-wrapper" class="p-4 md:p-6 bg-[var(--card-background)] border border-[var(--border-color)] rounded-xl shadow-sm">
                 <div class="flex justify-between items-center mb-2">
                     <h3 class="font-bold text-base">過去1年間の読了記録</h3>
@@ -466,21 +496,19 @@
                         1枚以上
                     </div>
                 </div>
-                <div id="graph-months" class="relative text-xs text-[var(--muted-foreground)] h-4 mb-2">
-                    </div>
                 <div class="flex gap-3">
                     <div id="graph-days" class="grid grid-rows-7 text-xs text-[var(--muted-foreground)] shrink-0">
-                         </div>
-                    <div id="contribution-graph-container" class="overflow-x-auto">
-                        <div id="graph-grid" class="graph-grid">
-                             </div>
+                    </div>
+                    <div id="contribution-graph-container" class="overflow-x-auto relative pt-6">
+                        <div id="graph-months" class="absolute top-0 left-0 text-xs text-[var(--muted-foreground)] h-4 mb-2"></div>
+                        <div id="graph-grid"></div>
                     </div>
                 </div>
             </div>
             <div id="category-stats-wrapper">
-                 <h3 class="text-xl font-bold mb-4">カテゴリ別読了数</h3>
+                 <h3 class="text-xl font-bold mb-4">カテゴリ別読了数（サマリー）</h3>
                  <div id="category-stats-container" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    </div>
+                 </div>
             </div>
         </div>
     </div>
@@ -586,11 +614,17 @@
         let currentStatusFilter = 'all';
         let currentCategoryFilter = 'all';
         let initialLoad = true;
+        let charts = {}; // To hold chart instances
         const STATUS_CYCLE = ['unread', 'to-read', 'skimmed', 'read'];
 
         marked.use(markedKatex({ throwOnError: false }));
 
         function renderOtherPage() {
+            // New Features
+            renderKeyAchievements();
+            renderDetailedStats();
+            
+            // Existing Features
             renderContributionGraph();
             renderCategoryStats();
         }
@@ -684,43 +718,195 @@
             }
         }
         
+        // --- ▼▼▼ NEW/MODIFIED FEATURE LOGIC ▼▼▼ ---
+
+        // 1. Key Achievements
+        function renderKeyAchievements() {
+            const container = document.getElementById('key-achievements-container');
+            if (!container) return;
+            
+            const readPapers = papers.filter(p => p.status === 'read' && p.readAt && p.readAt.toDate);
+            
+            // --- Max Streak Calculation ---
+            let maxStreak = 0;
+            if (readPapers.length > 0) {
+                const readDates = [...new Set(readPapers.map(p => p.readAt.toDate().toISOString().split('T')[0]))].sort();
+                if (readDates.length > 0) {
+                    let currentStreak = 1;
+                    maxStreak = 1;
+                    for (let i = 1; i < readDates.length; i++) {
+                        const prevDate = new Date(readDates[i-1]);
+                        const currentDate = new Date(readDates[i]);
+                        const diffTime = currentDate - prevDate;
+                        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                        if (diffDays === 1) {
+                            currentStreak++;
+                        } else {
+                            currentStreak = 1;
+                        }
+                        if (currentStreak > maxStreak) {
+                            maxStreak = currentStreak;
+                        }
+                    }
+                }
+            }
+
+            // --- Top Category Calculation ---
+            let topCategory = { name: 'N/A', count: 0 };
+            if (readPapers.length > 0) {
+                const categoryCounts = readPapers.reduce((acc, p) => {
+                    const cat = p.category || '未分類';
+                    acc[cat] = (acc[cat] || 0) + 1;
+                    return acc;
+                }, {});
+                for (const [name, count] of Object.entries(categoryCounts)) {
+                    if (count > topCategory.count) {
+                        topCategory = { name, count };
+                    }
+                }
+            }
+
+            container.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-card-count">${maxStreak} <span class="text-lg font-medium">日</span></div>
+                    <div class="stat-card-label">最大読了ストリーク</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-count">${topCategory.count} <span class="text-lg font-medium">本</span></div>
+                    <div class="stat-card-label">最多読了カテゴリ (${topCategory.name})</div>
+                </div>
+            `;
+        }
+
+
+        // 2. Detailed Stats (with Author Category)
+        function renderDetailedStats() {
+            const readPapers = papers.filter(p => p.status === 'read' && p.readAt && p.readAt.toDate);
+            const detailedStatsWrapper = document.getElementById('detailed-stats-wrapper');
+
+            if (readPapers.length === 0) {
+                 detailedStatsWrapper.innerHTML = `<h3 class="text-xl font-bold mb-4">詳細な統計</h3><p class="text-center text-[var(--muted-foreground)]">統計を表示するには、既読の論文が1本以上必要です。</p>`;
+                 return;
+            } else {
+                detailedStatsWrapper.innerHTML = `
+                    <h3 class="text-xl font-bold mb-4">詳細な統計</h3>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="bg-[var(--card-background)] p-4 rounded-xl border border-[var(--border-color)]">
+                             <h4 class="font-bold mb-2 text-center">月別読了論文数</h4>
+                            <canvas id="monthly-reads-chart"></canvas>
+                        </div>
+                        <div class="bg-[var(--card-background)] p-4 rounded-xl border border-[var(--border-color)]">
+                            <h4 class="font-bold mb-2 text-center">カテゴリ別読了数</h4>
+                            <div class="max-w-xs mx-auto">
+                               <canvas id="category-reads-chart"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-[var(--card-background)] p-4 rounded-xl border border-[var(--border-color)]">
+                             <h4 class="font-bold mb-2 text-center">発表年の分布</h4>
+                            <canvas id="year-distribution-chart"></canvas>
+                        </div>
+                        <div class="bg-[var(--card-background)] p-4 rounded-xl border border-[var(--border-color)]">
+                            <h4 class="font-bold mb-2 text-center">読了論文 著者ランキング Top 10</h4>
+                            <div id="top-authors-container" class="space-y-2"></div>
+                        </div>
+                    </div>`;
+            }
+
+            Object.values(charts).forEach(chart => chart.destroy());
+            
+            const style = getComputedStyle(document.documentElement);
+            const primaryColor = style.getPropertyValue('--primary-color').trim();
+            const mutedColor = style.getPropertyValue('--muted-foreground').trim();
+            const borderColor = style.getPropertyValue('--border-color').trim();
+            
+            // Monthly Reads
+            const monthlyReads = {};
+            for(let i=11; i>=0; i--) {
+                const d = new Date(); d.setMonth(d.getMonth() - i);
+                const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                monthlyReads[key] = 0;
+            }
+            readPapers.forEach(p => {
+                const d = p.readAt.toDate();
+                const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                if(monthlyReads.hasOwnProperty(key)) monthlyReads[key]++;
+            });
+            charts.monthly = new Chart(document.getElementById('monthly-reads-chart').getContext('2d'), {
+                type: 'bar', data: { labels: Object.keys(monthlyReads), datasets: [{ label: '読了数', data: Object.values(monthlyReads), backgroundColor: primaryColor, borderRadius: 4 }] },
+                options: { scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+            });
+
+            // Category Reads
+            const categoryCounts = readPapers.reduce((acc, p) => {
+                const cat = p.category || '未分類'; acc[cat] = (acc[cat] || 0) + 1; return acc; }, {});
+            charts.category = new Chart(document.getElementById('category-reads-chart').getContext('2d'), {
+                type: 'doughnut', data: { labels: Object.keys(categoryCounts), datasets: [{ data: Object.values(categoryCounts), backgroundColor: ['#4f46e5', '#3b82f6', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'], borderColor: style.getPropertyValue('--background').trim() }] }
+            });
+
+            // Year Distribution
+            const yearCounts = readPapers.reduce((acc, p) => { if (p.year) { acc[p.year] = (acc[p.year] || 0) + 1; } return acc; }, {});
+            const sortedYears = Object.keys(yearCounts).sort((a,b) => a - b);
+            charts.year = new Chart(document.getElementById('year-distribution-chart').getContext('2d'), {
+                type: 'bar', data: { labels: sortedYears, datasets: [{ label: '発表年', data: sortedYears.map(y => yearCounts[y]), backgroundColor: primaryColor }] },
+                options: { scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+            });
+
+            // Top Authors with Category
+            const authorData = {};
+            readPapers.forEach(p => {
+                const category = p.category || '未分類';
+                if (p.authors) {
+                    p.authors.forEach(author => {
+                        if (!authorData[author.name]) {
+                            authorData[author.name] = { count: 0, categories: {} };
+                        }
+                        authorData[author.name].count++;
+                        authorData[author.name].categories[category] = (authorData[author.name].categories[category] || 0) + 1;
+                    });
+                }
+            });
+            const sortedAuthors = Object.entries(authorData).sort(([,a],[,b]) => b.count-a.count).slice(0, 10);
+            
+            const topAuthorsContainer = document.getElementById('top-authors-container');
+            topAuthorsContainer.innerHTML = sortedAuthors.map(([name, data], index) => {
+                const topCategory = Object.entries(data.categories).sort(([,a],[,b]) => b-a)[0][0];
+                return `
+                    <div class="flex justify-between items-center py-1.5 border-b border-[var(--border-color)]">
+                        <div>
+                            <p class="font-semibold">${index + 1}. ${name}</p>
+                            <p class="text-xs text-[var(--muted-foreground)]">${topCategory}</p>
+                        </div>
+                        <span class="font-bold text-lg text-[var(--primary-color)]">${data.count}</span>
+                    </div>`;
+            }).join('') || `<p class="text-center text-[var(--muted-foreground)]">データがありません。</p>`;
+        }
+
+
+        // --- ▲▲▲ NEW/MODIFIED FEATURE LOGIC ▲▲▲ ---
+
+
         function renderCategoryStats() {
             const container = document.getElementById('category-stats-container');
             if (!container) return;
             container.innerHTML = '';
-
             const readPapers = papers.filter(p => p.status === 'read');
-
             if (readPapers.length === 0) {
                 container.innerHTML = `<p class="text-[var(--muted-foreground)] col-span-full text-center">まだ既読の論文はありません。</p>`;
                 return;
             }
-
-            const categoryCounts = {};
-            let totalCount = 0;
-
+            const categoryCounts = {}; let totalCount = 0;
             readPapers.forEach(p => {
                 const category = p.category || '未分類';
-                categoryCounts[category] = (categoryCounts[category] || 0) + 1;
-                totalCount++;
+                categoryCounts[category] = (categoryCounts[category] || 0) + 1; totalCount++;
             });
-
-            // Add total card first
             const totalCard = document.createElement('div');
             totalCard.className = 'stat-card';
-            totalCard.innerHTML = `
-                <div class="stat-card-count">${totalCount}</div>
-                <div class="stat-card-label">合計</div>`;
+            totalCard.innerHTML = `<div class="stat-card-count">${totalCount}</div><div class="stat-card-label">合計</div>`;
             container.appendChild(totalCard);
-
-            // Add category cards
             Object.keys(categoryCounts).sort().forEach(category => {
-                const count = categoryCounts[category];
-                const card = document.createElement('div');
+                const count = categoryCounts[category]; const card = document.createElement('div');
                 card.className = 'stat-card';
-                card.innerHTML = `
-                    <div class="stat-card-count">${count}</div>
-                    <div class="stat-card-label">${category}</div>`;
+                card.innerHTML = `<div class="stat-card-count">${count}</div><div class="stat-card-label">${category}</div>`;
                 container.appendChild(card);
             });
         }
@@ -731,16 +917,10 @@
             const gridContainer = document.getElementById('graph-grid');
             if (!monthsContainer || !daysContainer || !gridContainer) return;
 
-            monthsContainer.innerHTML = '';
-            daysContainer.innerHTML = '';
-            gridContainer.innerHTML = '';
+            monthsContainer.innerHTML = ''; daysContainer.innerHTML = ''; gridContainer.innerHTML = '';
             
-            const dayLabels = ['日', '月', '火', '水', '木', '金', '土'];
-            dayLabels.forEach((day, i) => {
-                const span = document.createElement('span');
-                if (i % 2 !== 0) { 
-                    span.textContent = day;
-                }
+            ['日', '月', '火', '水', '木', '金', '土'].forEach((day, i) => {
+                const span = document.createElement('span'); if (i % 2 !== 0) span.textContent = day;
                 daysContainer.appendChild(span);
             });
 
@@ -751,115 +931,72 @@
                 readCounts[dateString] = (readCounts[dateString] || 0) + 1;
             });
 
-            const today = new Date();
-            let currentDate = new Date();
-            currentDate.setFullYear(today.getFullYear() - 1);
-            currentDate.setDate(today.getDate() + 1);
+            const today = new Date(); let currentDate = new Date();
+            currentDate.setFullYear(today.getFullYear() - 1); currentDate.setDate(today.getDate() + 1);
             currentDate.setDate(currentDate.getDate() - currentDate.getDay());
-
-            let lastMonth = -1;
-            const blockWidth = 16;
-            const gap = 4;
-            let weekIndex = 0;
+            
+            let lastMonth = -1; const blockWidth = 16; const gap = 4; let weekIndex = 0;
 
             for (let i = 0; i < 371; i++) {
                 const dateString = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
-                
                 const currentMonth = currentDate.getMonth();
                 if (currentDate.getDate() === 1 && currentMonth !== lastMonth) {
                     lastMonth = currentMonth;
-                    const monthLabel = document.createElement('span');
-                    monthLabel.textContent = `${currentMonth + 1}月`;
-                    monthLabel.className = 'absolute';
-                    monthLabel.style.left = `${weekIndex * (blockWidth + gap)}px`;
+                    const monthLabel = document.createElement('span'); monthLabel.textContent = `${currentMonth + 1}月`;
+                    monthLabel.className = 'absolute'; monthLabel.style.left = `${weekIndex * (blockWidth + gap)}px`;
                     monthsContainer.appendChild(monthLabel);
                 }
 
                 const dayBlock = document.createElement('div');
                 if (currentDate <= today) {
-                    const count = readCounts[dateString] || 0;
-                    dayBlock.className = 'graph-day';
+                    const count = readCounts[dateString] || 0; dayBlock.className = 'graph-day';
                     dayBlock.dataset.date = dateString;
-
-                    if (count > 0) {
-                        dayBlock.classList.add('level-4');
-                    }
+                    if (count > 0) dayBlock.classList.add('level-4');
                     dayBlock.title = `${dateString}: ${count}件の論文を読了`;
                 } else {
                     dayBlock.style.visibility = 'hidden';
                 }
-
                 gridContainer.appendChild(dayBlock);
-
                 currentDate.setDate(currentDate.getDate() + 1);
-                if (currentDate.getDay() === 0) {
-                    weekIndex++;
-                }
+                if (currentDate.getDay() === 0) weekIndex++;
             }
         }
 
         function renderPapers() {
             updateCategoryFilterOptions();
-            
             let filteredPapers = papers;
-            if (currentStatusFilter !== 'all') {
-                filteredPapers = papers.filter(p => p.status === currentStatusFilter);
-            }
-            if (currentCategoryFilter !== 'all') {
-                filteredPapers = filteredPapers.filter(p => (p.category || '未分類') === currentCategoryFilter);
-            }
-
+            if (currentStatusFilter !== 'all') filteredPapers = papers.filter(p => p.status === currentStatusFilter);
+            if (currentCategoryFilter !== 'all') filteredPapers = filteredPapers.filter(p => (p.category || '未分類') === currentCategoryFilter);
             papersContainer.innerHTML = ''; 
-
             if (filteredPapers.length === 0 && !initialLoad) {
-                papersContainer.appendChild(emptyState);
-                emptyState.classList.remove('hidden');
-                return;
+                emptyState.classList.remove('hidden'); papersContainer.appendChild(emptyState); return;
             }
             emptyState.classList.add('hidden');
-            
             const groupedPapers = filteredPapers.reduce((acc, paper) => {
-                const category = paper.category || '未分類';
-                if (!acc[category]) {
-                    acc[category] = [];
-                }
-                acc[category].push(paper);
-                return acc;
+                const category = paper.category || '未分類'; if (!acc[category]) acc[category] = [];
+                acc[category].push(paper); return acc;
             }, {});
-
-            const sortedCategories = Object.keys(groupedPapers).sort();
-            
-            sortedCategories.forEach(category => {
-                const categoryHeading = document.createElement('h2');
-                categoryHeading.className = 'category-heading';
-                categoryHeading.textContent = category;
-                papersContainer.appendChild(categoryHeading);
-
-                const categoryContainer = document.createElement('div');
-                categoryContainer.className = 'space-y-4';
-
+            Object.keys(groupedPapers).sort().forEach(category => {
+                const categoryHeading = document.createElement('h2'); categoryHeading.className = 'category-heading';
+                categoryHeading.textContent = category; papersContainer.appendChild(categoryHeading);
+                const categoryContainer = document.createElement('div'); categoryContainer.className = 'space-y-4';
                 groupedPapers[category].forEach(paper => {
                     const card = document.createElement('div');
                     const statusClassMap = { read: 'is-read', skimmed: 'is-skimmed', 'to-read': 'is-to-read' };
                     const statusClass = statusClassMap[paper.status] || '';
                     card.className = `paper-card group p-4 rounded-xl transition-all duration-300 border ${statusClass ? statusClass : 'border-[var(--border-color)] bg-[var(--card-background)] hover:bg-[var(--card-hover-background)]'}`;
-                    
-                    if (!statusClass) { card.style.background = 'var(--card-background)'; }
-
+                    if (!statusClass) card.style.background = 'var(--card-background)';
                     const linkOrTitle = paper.url ? `<a href="${paper.url}" target="_blank" rel="noopener noreferrer" class="font-bold hover:underline">${paper.title}</a>` : `<span class="font-bold">${paper.title}</span>`;
                     const authorsText = (paper.authors && paper.authors.length > 0) ? paper.authors.map(a => a.name).join(', ') : '著者不明';
                     const noteHTML = paper.note ? marked.parse(paper.note) : '';
-
                     const statusConfig = {
                         'unread': { title: '「優先」に設定', color: 'text-[var(--muted-foreground)] hover:text-yellow-500'},
                         'to-read': { title: '「流し読み」に設定', color: 'text-yellow-500 hover:text-sky-500'},
                         'skimmed': { title: '「既読」に設定', color: 'text-sky-500 hover:text-green-500'},
                         'read': { title: '「未読」に戻す', color: 'text-green-500 hover:text-[var(--muted-foreground)]'}
                     };
-                    const currentStatus = paper.status || 'unread';
-                    const config = statusConfig[currentStatus];
+                    const currentStatus = paper.status || 'unread'; const config = statusConfig[currentStatus];
                     const statusBtnHTML = `<button class="p-1.5 rounded-md ${config.color} hover:bg-black/5 dark:hover:bg-white/10" onclick="window.changePaperStatus('${paper.id}')" title="${config.title}"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg></button>`;
-
                     card.innerHTML = `
                         <div class="flex items-start justify-between relative">
                             <div class="flex-1 pr-4 min-w-0">
@@ -881,10 +1018,8 @@
                         ${noteHTML ? `<div class="mt-3 pt-3 border-t border-[var(--border-color)] text-sm prose prose-sm max-w-none">${noteHTML}</div>` : ''}
                     `;
                     categoryContainer.appendChild(card);
-                });
-                papersContainer.appendChild(categoryContainer);
+                }); papersContainer.appendChild(categoryContainer);
             });
-            
             const currentUser = auth.currentUser;
             document.querySelectorAll('.admin-only').forEach(el => {
                 if(el.tagName === 'ASIDE') { el.style.display = currentUser ? 'block' : 'none'; }
@@ -894,78 +1029,44 @@
         
         window.deletePaper = async (paperId) => {
             if (confirm('この論文を削除してもよろしいですか？')) {
-                try {
-                    await db.collection('papers').doc(paperId).delete();
-                    showToast('論文を削除しました', 'success');
-                } catch (e) { showToast('削除に失敗しました', 'error'); }
+                try { await db.collection('papers').doc(paperId).delete(); showToast('論文を削除しました', 'success'); }
+                catch (e) { showToast('削除に失敗しました', 'error'); }
             }
         };
 
         window.changePaperStatus = async (paperId) => {
-            const paper = papers.find(p => p.id === paperId);
-            if (!paper) return;
-
+            const paper = papers.find(p => p.id === paperId); if (!paper) return;
             const currentStatus = paper.status || 'unread';
-
-            if (currentStatus === 'read') {
-                if (!confirm('この論文を「未読」に戻しますか？')) {
-                    return; 
-                }
-            }
-
+            if (currentStatus === 'read' && !confirm('この論文を「未読」に戻しますか？')) return;
             const currentIndex = STATUS_CYCLE.indexOf(currentStatus);
             const nextStatus = STATUS_CYCLE[(currentIndex + 1) % STATUS_CYCLE.length];
-
             const updateData = { status: nextStatus };
-            if (nextStatus === 'read' && currentStatus !== 'read') {
-                updateData.readAt = firebase.firestore.FieldValue.serverTimestamp();
-            } else if (nextStatus !== 'read') {
-                updateData.readAt = null;
-            }
-            
-            try {
-                await db.collection('papers').doc(paperId).update(updateData);
-            } catch (e) {
-                showToast('ステータスの更新に失敗しました', 'error');
-            }
+            if (nextStatus === 'read' && currentStatus !== 'read') updateData.readAt = firebase.firestore.FieldValue.serverTimestamp();
+            else if (nextStatus !== 'read') updateData.readAt = firebase.firestore.FieldValue.delete();
+            try { await db.collection('papers').doc(paperId).update(updateData); }
+            catch (e) { showToast('ステータスの更新に失敗しました', 'error'); }
         };
         
         window.openNoteEditor = (paperId) => {
-            currentEditingPaperId = paperId;
-            const paper = papers.find(p => p.id === paperId);
-            if (!paper) return;
+            currentEditingPaperId = paperId; const paper = papers.find(p => p.id === paperId); if (!paper) return;
             noteModalTitle.textContent = `メモを編集: ${paper.title}`;
-            noteEditor.value = paper.note || '';
-            notePreview.innerHTML = marked.parse(paper.note || '');
-            noteModal.classList.remove('hidden');
-            noteModal.classList.add('flex');
+            noteEditor.value = paper.note || ''; notePreview.innerHTML = marked.parse(paper.note || '');
+            noteModal.classList.remove('hidden'); noteModal.classList.add('flex');
         };
-
         const closeNoteEditor = () => {
-            noteModal.classList.add('hidden');
-            noteModal.classList.remove('flex');
-            currentEditingPaperId = null;
+            noteModal.classList.add('hidden'); noteModal.classList.remove('flex'); currentEditingPaperId = null;
         };
 
         window.openEditModal = (paperId) => {
-            currentEditingPaperId = paperId;
-            const paper = papers.find(p => p.id === paperId);
-            if (!paper) return;
+            currentEditingPaperId = paperId; const paper = papers.find(p => p.id === paperId); if (!paper) return;
             editTitleInput.value = paper.title || '';
             editAuthorsInput.value = (paper.authors && paper.authors.length > 0) ? paper.authors.map(a => a.name).join(', ') : '';
-            editUrlInput.value = paper.url || '';
-            editYearInput.value = paper.year || '';
-            editCitationsInput.value = paper.citationCount ?? '';
-            editCategoryInput.value = paper.category || '';
-            editModal.classList.remove('hidden');
-            editModal.classList.add('flex');
+            editUrlInput.value = paper.url || ''; editYearInput.value = paper.year || '';
+            editCitationsInput.value = paper.citationCount ?? ''; editCategoryInput.value = paper.category || '';
+            editModal.classList.remove('hidden'); editModal.classList.add('flex');
         };
-
         const closeEditModal = () => {
-            editModal.classList.add('hidden');
-            editModal.classList.remove('flex');
-            currentEditingPaperId = null;
-            editPaperForm.reset();
+            editModal.classList.add('hidden'); editModal.classList.remove('flex'); currentEditingPaperId = null; editPaperForm.reset();
         };
         
         loginBtn.addEventListener('click', () => { authModal.classList.remove('hidden'); authModal.classList.add('flex'); });
@@ -973,94 +1074,60 @@
         logoutBtn.addEventListener('click', () => { auth.signOut(); });
         
         loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = loginForm['email-address'].value;
-            const password = loginForm['password'].value;
+            e.preventDefault(); const email = loginForm['email-address'].value; const password = loginForm['password'].value;
             try {
-                await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-                await auth.signInWithEmailAndPassword(email, password);
-                authErrorDiv.classList.add('hidden');
-                closeAuthModalBtn.click();
+                await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); await auth.signInWithEmailAndPassword(email, password);
+                authErrorDiv.classList.add('hidden'); closeAuthModalBtn.click();
             } catch (error) {
-                console.error("Login failed:", error);
-                authErrorDiv.textContent = 'メールアドレスまたはパスワードが間違っています。';
+                console.error("Login failed:", error); authErrorDiv.textContent = 'メールアドレスまたはパスワードが間違っています。';
                 authErrorDiv.classList.remove('hidden');
             }
         });
 
         autocompleteBtn.addEventListener('click', async () => {
-            const query = paperTitleInput.value.trim();
-            if (!query) { showToast('タイトルまたはURLを入力してください。', 'error'); return; }
-            let paperData = null;
-            const match = query.match(ARXIV_ID_REGEX);
-            if (match) {
-                const paperId = match[0].replace('.pdf', '');
-                paperData = await fetchPaperDataByArxivId(paperId);
-            } else {
-                paperData = await searchAndFetchPaperDataByQuery(query);
-            }
+            const query = paperTitleInput.value.trim(); if (!query) { showToast('タイトルまたはURLを入力してください。', 'error'); return; }
+            let paperData = null; const match = query.match(ARXIV_ID_REGEX);
+            if (match) { const paperId = match[0].replace('.pdf', ''); paperData = await fetchPaperDataByArxivId(paperId); }
+            else { paperData = await searchAndFetchPaperDataByQuery(query); }
             if (paperData) {
                 paperTitleInput.value = paperData.title || '';
                 paperAuthorsInput.value = (paperData.authors && paperData.authors.length > 0) ? paperData.authors.map(a => a.name).join(', ') : '';
-                paperUrlDisplayInput.value = paperData.url || '';
-                paperYearInput.value = paperData.year || '';
-                paperCitationsInput.value = paperData.citationCount ?? '';
-                showToast('論文情報を補完しました。', 'success');
-            } else {
-                showToast('論文情報が見つかりませんでした。', 'error');
-            }
+                paperUrlDisplayInput.value = paperData.url || ''; paperYearInput.value = paperData.year || '';
+                paperCitationsInput.value = paperData.citationCount ?? ''; showToast('論文情報を補完しました。', 'success');
+            } else { showToast('論文情報が見つかりませんでした。', 'error'); }
         });
 
         paperForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            addBtn.disabled = true;
-            btnText.classList.add('hidden');
-            btnLoader.classList.remove('hidden');
+            e.preventDefault(); addBtn.disabled = true; btnText.classList.add('hidden'); btnLoader.classList.remove('hidden');
             try {
-                const title = paperTitleInput.value.trim();
-                if (!title) throw new Error('タイトルは必須です。');
-                
+                const title = paperTitleInput.value.trim(); if (!title) throw new Error('タイトルは必須です。');
                 const newPaperData = {
                     title: title,
                     authors: paperAuthorsInput.value.trim().split(',').filter(Boolean).map(name => ({ name: name.trim() })),
                     url: paperUrlDisplayInput.value.trim() || null,
                     year: paperYearInput.value.trim() ? parseInt(paperYearInput.value, 10) : null,
                     citationCount: paperCitationsInput.value.trim() ? parseInt(paperCitationsInput.value, 10) : null,
-                    category: paperCategoryInput.value.trim(),
-                    note: paperNoteInput.value.trim(),
-                    status: 'unread',
-                    readAt: null,
+                    category: paperCategoryInput.value.trim(), note: paperNoteInput.value.trim(), status: 'unread', readAt: null,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
-                await db.collection('papers').add(newPaperData);
-                showToast('論文を追加しました', 'success');
-                paperForm.reset();
+                await db.collection('papers').add(newPaperData); showToast('論文を追加しました', 'success'); paperForm.reset();
             } catch (error) {
-                showToast(error.message || '処理中にエラーが発生しました。', 'error');
-                console.error("Error adding document:", error);
-            } finally {
-                addBtn.disabled = false;
-                btnText.classList.remove('hidden');
-                btnLoader.classList.add('hidden');
-            }
+                showToast(error.message || '処理中にエラーが発生しました。', 'error'); console.error("Error adding document:", error);
+            } finally { addBtn.disabled = false; btnText.classList.remove('hidden'); btnLoader.classList.add('hidden'); }
         });
 
         noteEditor.addEventListener('input', () => { notePreview.innerHTML = marked.parse(noteEditor.value); });
         
         saveNoteBtn.addEventListener('click', async () => {
-            if (!currentEditingPaperId) return;
-            saveNoteBtn.disabled = true;
+            if (!currentEditingPaperId) return; saveNoteBtn.disabled = true;
             try {
                 await db.collection('papers').doc(currentEditingPaperId).update({ note: noteEditor.value });
-                showToast('メモを保存しました', 'success');
-                closeNoteEditor();
-            } catch (error) {
-                showToast('保存に失敗しました', 'error');
-            } finally { saveNoteBtn.disabled = false; }
+                showToast('メモを保存しました', 'success'); closeNoteEditor();
+            } catch (error) { showToast('保存に失敗しました', 'error'); }
+            finally { saveNoteBtn.disabled = false; }
         });
 
-        closeModalBtn.addEventListener('click', closeNoteEditor);
-        cancelNoteBtn.addEventListener('click', closeNoteEditor);
+        closeModalBtn.addEventListener('click', closeNoteEditor); cancelNoteBtn.addEventListener('click', closeNoteEditor);
 
         saveEditBtn.addEventListener('click', async () => {
             if (!currentEditingPaperId) return;
@@ -1076,15 +1143,12 @@
             saveEditBtn.disabled = true;
             try {
                 await db.collection('papers').doc(currentEditingPaperId).update(updatedData);
-                showToast('論文情報を更新しました', 'success');
-                closeEditModal();
+                showToast('論文情報を更新しました', 'success'); closeEditModal();
             } catch (error) {
-                console.error("Failed to update paper:", error);
-                showToast('更新に失敗しました', 'error');
+                console.error("Failed to update paper:", error); showToast('更新に失敗しました', 'error');
             } finally { saveEditBtn.disabled = false; }
         });
-        cancelEditBtn.addEventListener('click', closeEditModal);
-        closeEditModalBtn.addEventListener('click', closeEditModal);
+        cancelEditBtn.addEventListener('click', closeEditModal); closeEditModalBtn.addEventListener('click', closeEditModal);
 
         function showToast(message, type = 'success') {
             toast.textContent = message;
@@ -1094,9 +1158,7 @@
         
         function updateFilterButtons() {
             const baseClass = 'filter-btn px-4 py-2 text-sm font-medium transition-colors focus:outline-none';
-            const activeClass = 'bg-[var(--primary-color)] text-white';
-            const inactiveClass = 'bg-[var(--card-background)] text-[var(--foreground)] hover:bg-[var(--card-hover-background)]';
-            
+            const activeClass = 'bg-[var(--primary-color)] text-white'; const inactiveClass = 'bg-[var(--card-background)] text-[var(--foreground)] hover:bg-[var(--card-hover-background)]';
             filterAllBtn.className = `${baseClass} rounded-l-md ${currentStatusFilter === 'all' ? activeClass : inactiveClass}`;
             filterToReadBtn.className = `${baseClass} border-l border-[var(--border-color)] ${currentStatusFilter === 'to-read' ? activeClass : inactiveClass}`;
             filterUnreadBtn.className = `${baseClass} border-l border-[var(--border-color)] ${currentStatusFilter === 'unread' ? activeClass : inactiveClass}`;
@@ -1110,8 +1172,7 @@
             categoryFilterSelect.innerHTML = '<option value="all">すべてのカテゴリ</option>';
             categories.sort().forEach(category => {
                 const option = document.createElement('option');
-                option.value = category; option.textContent = category;
-                categoryFilterSelect.appendChild(option);
+                option.value = category; option.textContent = category; categoryFilterSelect.appendChild(option);
             });
             if (categories.includes(prevValue)) categoryFilterSelect.value = prevValue;
         }
@@ -1124,9 +1185,7 @@
         categoryFilterSelect.addEventListener('change', (e) => { currentCategoryFilter = e.target.value; renderPapers(); });
 
         document.addEventListener('DOMContentLoaded', () => {
-            paperForm.reset(); 
-            updateFilterButtons();
-            startDataListening();
+            paperForm.reset(); updateFilterButtons(); startDataListening();
         });
     </script>
 </body>
