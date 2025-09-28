@@ -217,3 +217,44 @@ body {
 .theme-option.active {
     font-weight: 600; color: var(--primary-color);
 }
+
+/* --- Responsive Header for Mobile --- */
+@media (max-width: 767px) {
+    header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    header > div {
+        width: 100%;
+    }
+
+    header > div:first-child {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    header > div:last-child {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+    }
+
+    /* Adjust title size */
+    header h1.text-3xl {
+        font-size: 1.5rem; /* = text-2xl */
+    }
+
+    #view-switcher {
+        display: none; /* Hide view switcher on mobile for simplicity */
+    }
+
+    /* Adjust button sizes */
+    #login-btn, #logout-btn {
+        padding: 0.5rem 0.75rem; /* py-2 px-3 */
+        font-size: 0.875rem; /* text-sm */
+    }
+}
+
