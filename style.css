@@ -247,10 +247,6 @@ body {
         font-size: 1.5rem; /* = text-2xl */
     }
 
-    #view-switcher {
-        display: none; /* Hide view switcher on mobile for simplicity */
-    }
-
     /* Adjust button sizes */
     #login-btn, #logout-btn {
         padding: 0.5rem 0.75rem; /* py-2 px-3 */
