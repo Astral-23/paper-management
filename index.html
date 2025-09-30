@@ -212,6 +212,10 @@
                             <button id="filter-read" class="filter-btn">既読</button>
                         </div>
                         <select id="category-filter" class="rounded-lg bg-[var(--input-background)] border-[var(--input-border-color)] shadow-sm focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)]"></select>
+                        <select id="sort-order" class="rounded-lg bg-[var(--input-background)] border-[var(--input-border-color)] shadow-sm focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)]">
+                            <option value="publicationYear">発表年</option>
+                            <option value="citationCount">被引用数</option>
+                        </select>
                     </div>
                     <section id="papers-container">
                         <div id="skeleton-loader">

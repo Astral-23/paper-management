@@ -51,3 +51,4 @@ export const showListBtn = document.getElementById('show-list-btn');
 export const showOtherBtn = document.getElementById('show-other-btn');
 export const listPage = document.getElementById('list-page');
 export const otherPage = document.getElementById('other-page');
+export const sortOrderSelect = document.getElementById('sort-order');

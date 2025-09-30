@@ -37,6 +37,13 @@ export function renderPapers() {
     let filteredPapers = state.papers;
     if (state.currentStatusFilter !== 'all') filteredPapers = state.papers.filter(p => p.status === state.currentStatusFilter);
     if (state.currentCategoryFilter !== 'all') filteredPapers = filteredPapers.filter(p => (p.category || '未分類') === state.currentCategoryFilter);
+
+    if (state.sortOrder === 'publicationYear') {
+        filteredPapers.sort((a, b) => (b.year || 0) - (a.year || 0));
+    } else if (state.sortOrder === 'citationCount') {
+        filteredPapers.sort((a, b) => (b.citationCount || 0) - (a.citationCount || 0));
+    }
+
     papersContainer.innerHTML = ''; 
     if (filteredPapers.length === 0 && !state.initialLoad) {
         emptyState.classList.remove('hidden'); papersContainer.appendChild(emptyState); return;

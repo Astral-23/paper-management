@@ -86,7 +86,7 @@
 
 ### `ui.js`
 - **責務:** DOMの描画と更新、UIコンポーネントの操作を担う。
-- **主な関数 (予定):**
+- **主な関数:**
     - `renderPapers()`: 論文リストを描画する。
     - `openNoteEditor(paperId)`, `closeNoteEditor()`: メモ編集モーダルの表示・非表示。
     - `openEditModal(paperId)`, `closeEditModal()`: 論文編集モーダルの表示・非表示。

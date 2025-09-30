@@ -16,6 +16,7 @@ import {
     filterToReadBtn,
     filterSkimmedBtn,
     categoryFilterSelect,
+    sortOrderSelect,
     closeModalBtn,
     cancelNoteBtn,
     noteEditor,
@@ -244,6 +245,7 @@ filterUnreadBtn.addEventListener('click', () => { updateState({ currentStatusFil
 filterToReadBtn.addEventListener('click', () => { updateState({ currentStatusFilter: 'to-read' }); updateFilterButtons(); renderPapers(); });
 filterSkimmedBtn.addEventListener('click', () => { updateState({ currentStatusFilter: 'skimmed' }); updateFilterButtons(); renderPapers(); });
 categoryFilterSelect.addEventListener('change', (e) => { updateState({ currentCategoryFilter: e.target.value }); renderPapers(); });
+sortOrderSelect.addEventListener('change', (e) => { updateState({ sortOrder: e.target.value }); renderPapers(); });
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
