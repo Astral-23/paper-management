@@ -150,3 +150,40 @@
 | 論文データが空配列の場合、全ての関数が空の結果を返す | 空の配列を引数に各関数を実行 | `calculateStatusCounts`と`calculateYearCounts`は`{}`を、`calculateTopAuthors`と`calculateTopCategories`は`[]`を返す |
 | `year`や`category`が未定義の論文データがあってもエラーにならない | `year`や`category`が`undefined`や`null`の論文を含むデータを引数に各関数を実行 | エラーが発生せず、`undefined`や`null`のデータは無視して集計される |
 | `authors`が空配列または未定義の論文データがあってもエラーにならない | `authors`が空配列や`undefined`の論文を含むデータを引数に`calculateTopAuthors`を実行 | エラーが発生せず、該当の論文は著者集計から無視される |
+
+---
+
+## 結合テスト: データフロー検証
+
+### 1. テスト計画
+- **テスト種別**: 結合テスト
+- **目的と範囲**:
+    - 目的: アプリケーションの主要なデータフローである「データ取得 → 状態更新 → UI描画」の連携が正しく行われることを検証する。
+    - 範囲: `firebase.js`のデータリスニングから、`state.js`による状態更新を経て、`ui.js`がUIを再描画するまでの一連の流れを対象とする。Firebaseとの実際の通信はモック化する。
+- **テスト対象**:
+    - `firebase.js` (`startDataListening`)
+    - `state.js` (`updateState`)
+    - `ui.js` (`renderPapers`)
+
+### 2. テスト設計
+| テストの具体的な内容 | 操作手順 | 期待結果 |
+| :--- | :--- | :--- |
+| Firestoreのデータ変更がUIに反映される | 1. `firebase.js`の`onSnapshot`コールバックをトリガーする。<br>2. テスト用の論文データを渡す。 | 1. `state.js`の`updateState`が、渡された論文データで呼び出されること。<br>2. `updateState`が呼び出された後、`ui.js`の`renderPapers`が呼び出されること。 |
+
+---
+
+## 結合テスト: フィルタリング機能
+
+### 1. テスト計画
+- **テスト種別**: 結合テスト
+- **目的と範囲**: 論文リストのステータスフィルター機能が正しく動作することを検証する。フィルターボタンのクリックから、状態の更新、UIの再描画までの一連の流れを対象とする。
+- **テスト対象**:
+    - `script.js` (イベントリスナー部分)
+    - `state.js` (`updateState`)
+    - `ui.js` (`renderPapers`, `updateFilterButtons`)
+
+### 2. テスト設計
+| テストの具体的な内容 | 操作手順 | 期待結果 |
+| :--- | :--- | :--- |
+| 「既読」フィルターボタンをクリックすると、既読の論文のみが表示される | 1. 複数のステータス（'read', 'unread'）を持つ論文を準備する。<br>2. `renderPapers` を実行し、初期表示を行う。<br>3. 「既読」フィルターボタン（`#filter-read`）をクリックする。 | 1. `state.updateState` が `{ currentStatusFilter: 'read' }` を引数に呼び出されること。<br>2. `ui.renderPapers` が再実行されること。<br>3. `ui.updateFilterButtons` が実行され、「既読」ボタンがアクティブになること。<br>4. 論文リストのDOMに、`status: 'read'` の論文のみが表示されていること。 |
+| 「すべて」フィルターボタンをクリックすると、すべての論文が表示される | 1. 複数のステータスを持つ論文を準備する。<br>2. いずれかのフィルター（例：「既読」）がアクティブな状態にする。<br>3. 「すべて」フィルターボタン（`#filter-all`）をクリックする。 | 1. `state.updateState` が `{ currentStatusFilter: 'all' }` を引数に呼び出されること。<br>2. 論文リストのDOMに、すべての論文が表示されていること。 |
