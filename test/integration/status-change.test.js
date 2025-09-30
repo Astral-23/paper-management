@@ -46,7 +46,7 @@ describe('ステータス変更機能 結合テスト', () => {
             try {
                 await firebaseModule.changePaperStatus(paperId);
                 uiModule.showToast('ステータスを更新しました', 'success');
-            } catch (err) {
+            } catch (_err) {
                 uiModule.showToast('ステータスの更新に失敗しました', 'error');
             }
         }

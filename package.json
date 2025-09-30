@@ -3,12 +3,14 @@
   "version": "1.0.0",
   "description": "[論文管理システム](https://ronbun-kanri-system.web.app/) のコード置き場",
   "main": "script.js",
+  "type": "module",
   "directories": {
     "doc": "doc",
     "test": "test"
   },
   "scripts": {
-    "test": "vitest"
+    "test": "vitest",
+    "lint": "eslint . --ext .js"
   },
   "repository": {
     "type": "git",
@@ -22,6 +24,8 @@
   },
   "homepage": "https://github.com/Astral-23/paper-management#readme",
   "devDependencies": {
+    "eslint": "^9.36.0",
+    "globals": "^16.4.0",
     "happy-dom": "^19.0.2",
     "jsdom": "^27.0.0",
     "vitest": "^3.2.4"

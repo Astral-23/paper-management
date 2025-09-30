@@ -198,7 +198,7 @@ saveNoteBtn.addEventListener('click', async () => {
         await saveNote(state.currentEditingPaperId, noteEditor.value);
         showToast('メモを保存しました', 'success');
         closeNoteEditor();
-    } catch (error) {
+    } catch (_error) {
         showToast('保存に失敗しました', 'error');
     } finally {
         saveNoteBtn.disabled = false;

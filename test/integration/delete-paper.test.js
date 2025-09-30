@@ -47,10 +47,9 @@ describe('論文削除機能 結合テスト', () => {
                 try {
                     await firebaseModule.deletePaper(paperId);
                     uiModule.showToast('論文を削除しました', 'success');
-                } catch (err) {
-                    uiModule.showToast('削除に失敗しました', 'error');
-                }
-            }
+                } catch (_err) {
+                                uiModule.showToast('削除に失敗しました', 'error');
+                            }            }
         }
     });
 

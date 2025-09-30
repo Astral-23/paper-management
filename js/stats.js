@@ -1,7 +1,5 @@
 import { state } from './state.js';
 
-import { state } from './state.js';
-
 export function calculateMaxStreak(readPapers) {
     if (!readPapers || readPapers.length === 0) {
         return 0;
@@ -155,7 +153,7 @@ function renderDetailedStats() {
     readPapers.forEach(p => {
         const d = p.readAt.toDate();
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        if(monthlyReads.hasOwnProperty(key)) monthlyReads[key]++;
+        if(Object.prototype.hasOwnProperty.call(monthlyReads, key)) monthlyReads[key]++;
     });
     state.charts.monthly = new Chart(document.getElementById('monthly-reads-chart').getContext('2d'), {
         type: 'bar', data: { labels: Object.keys(monthlyReads), datasets: [{ label: '読了数', data: Object.values(monthlyReads), backgroundColor: primaryColor, borderRadius: 4 }] },

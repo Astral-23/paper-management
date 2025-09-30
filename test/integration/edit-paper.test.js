@@ -68,7 +68,7 @@ describe('論文編集機能 結合テスト', () => {
             await firebaseModule.updatePaper(stateModule.state.currentEditingPaperId, updatedData);
             uiModule.showToast('論文情報を更新しました', 'success');
             uiModule.closeEditModal();
-        } catch (error) {
+        } catch (_error) {
             uiModule.showToast('更新に失敗しました', 'error');
         }
     });
