@@ -19,7 +19,10 @@ export function initializeTheme(renderOtherPageFunc) {
         renderOtherPageCallback = renderOtherPageFunc;
     }
 
-    themeMenuButton.addEventListener('click', () => themeMenu.classList.toggle('hidden'));
+    themeMenuButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        themeMenu.classList.toggle('hidden');
+    });
 
     themeOptions.forEach(option => {
         option.addEventListener('click', (e) => {

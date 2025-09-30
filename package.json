@@ -22,6 +22,8 @@
   },
   "homepage": "https://github.com/Astral-23/paper-management#readme",
   "devDependencies": {
+    "happy-dom": "^19.0.2",
+    "jsdom": "^27.0.0",
     "vitest": "^3.2.4"
   }
 }

@@ -6,7 +6,7 @@ export function calculateMaxStreak(readPapers) {
     if (!readPapers || readPapers.length === 0) {
         return 0;
     }
-    const readDates = [...new Set(readPapers.map(p => p.readAt.toDate().toISOString().split('T')[0]))].sort();
+    const readDates = [...new Set(readPapers.filter(p => p.readAt).map(p => p.readAt.toDate().toISOString().split('T')[0]))].sort();
     if (readDates.length === 0) {
         return 0;
     }
@@ -92,6 +92,23 @@ export function calculateTopAuthors(readPapers, limit = 10) {
     });
 }
 
+export function calculateStatusCounts(papers) {
+    return papers.reduce((acc, p) => {
+        const status = p.status || 'unread';
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+    }, {});
+}
+
+export function calculateYearCounts(papers) {
+    return papers.reduce((acc, p) => {
+        if (p.year) {
+            acc[p.year] = (acc[p.year] || 0) + 1;
+        }
+        return acc;
+    }, {});
+}
+
 function renderDetailedStats() {
     const readPapers = state.papers.filter(p => p.status === 'read' && p.readAt && p.readAt.toDate);
     const detailedStatsWrapper = document.getElementById('detailed-stats-wrapper');
@@ -151,7 +168,7 @@ function renderDetailedStats() {
         type: 'doughnut', data: { labels: Object.keys(categoryCounts), datasets: [{ data: Object.values(categoryCounts), backgroundColor: ['#4f46e5', '#3b82f6', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'], borderColor: style.getPropertyValue('--background').trim() }] }
     });
 
-    const yearCounts = readPapers.reduce((acc, p) => { if (p.year) { acc[p.year] = (acc[p.year] || 0) + 1; } return acc; }, {});
+    const yearCounts = calculateYearCounts(readPapers);
     const sortedYears = Object.keys(yearCounts).sort((a,b) => a - b);
     state.charts.year = new Chart(document.getElementById('year-distribution-chart').getContext('2d'), {
         type: 'bar', data: { labels: sortedYears, datasets: [{ label: '発表年', data: sortedYears.map(y => yearCounts[y]), backgroundColor: primaryColor }] },
