@@ -1,0 +1,27 @@
+{
+  "name": "paper-management",
+  "version": "1.0.0",
+  "description": "[論文管理システム](https://ronbun-kanri-system.web.app/) のコード置き場",
+  "main": "script.js",
+  "directories": {
+    "doc": "doc",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "vitest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Astral-23/paper-management.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Astral-23/paper-management/issues"
+  },
+  "homepage": "https://github.com/Astral-23/paper-management#readme",
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

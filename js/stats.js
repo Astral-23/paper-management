@@ -1,47 +1,63 @@
 import { state } from './state.js';
 
+import { state } from './state.js';
+
+export function calculateMaxStreak(readPapers) {
+    if (!readPapers || readPapers.length === 0) {
+        return 0;
+    }
+    const readDates = [...new Set(readPapers.map(p => p.readAt.toDate().toISOString().split('T')[0]))].sort();
+    if (readDates.length === 0) {
+        return 0;
+    }
+
+    let maxStreak = 1;
+    let currentStreak = 1;
+    for (let i = 1; i < readDates.length; i++) {
+        const prevDate = new Date(readDates[i-1]);
+        const currentDate = new Date(readDates[i]);
+        const diffTime = currentDate - prevDate;
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays === 1) {
+            currentStreak++;
+        } else {
+            currentStreak = 1;
+        }
+        if (currentStreak > maxStreak) {
+            maxStreak = currentStreak;
+        }
+    }
+    return maxStreak;
+}
+
+export function calculateTopCategory(readPapers) {
+    let topCategory = { name: 'N/A', count: 0 };
+    if (!readPapers || readPapers.length === 0) {
+        return topCategory;
+    }
+
+    const categoryCounts = readPapers.reduce((acc, p) => {
+        const cat = p.category || '未分類';
+        acc[cat] = (acc[cat] || 0) + 1;
+        return acc;
+    }, {});
+
+    for (const [name, count] of Object.entries(categoryCounts)) {
+        if (count > topCategory.count) {
+            topCategory = { name, count };
+        }
+    }
+    return topCategory;
+}
+
 function renderKeyAchievements() {
     const container = document.getElementById('key-achievements-container');
     if (!container) return;
     
     const readPapers = state.papers.filter(p => p.status === 'read' && p.readAt && p.readAt.toDate);
     
-    let maxStreak = 0;
-    if (readPapers.length > 0) {
-        const readDates = [...new Set(readPapers.map(p => p.readAt.toDate().toISOString().split('T')[0]))].sort();
-        if (readDates.length > 0) {
-            let currentStreak = 1;
-            maxStreak = 1;
-            for (let i = 1; i < readDates.length; i++) {
-                const prevDate = new Date(readDates[i-1]);
-                const currentDate = new Date(readDates[i]);
-                const diffTime = currentDate - prevDate;
-                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-                if (diffDays === 1) {
-                    currentStreak++;
-                } else {
-                    currentStreak = 1;
-                }
-                if (currentStreak > maxStreak) {
-                    maxStreak = currentStreak;
-                }
-            }
-        }
-    }
-
-    let topCategory = { name: 'N/A', count: 0 };
-    if (readPapers.length > 0) {
-        const categoryCounts = readPapers.reduce((acc, p) => {
-            const cat = p.category || '未分類';
-            acc[cat] = (acc[cat] || 0) + 1;
-            return acc;
-        }, {});
-        for (const [name, count] of Object.entries(categoryCounts)) {
-            if (count > topCategory.count) {
-                topCategory = { name, count };
-            }
-        }
-    }
+    const maxStreak = calculateMaxStreak(readPapers);
+    const topCategory = calculateTopCategory(readPapers);
 
     container.innerHTML = `
         <div class="stat-card">
@@ -53,6 +69,27 @@ function renderKeyAchievements() {
             <div class="stat-card-label">最多読了カテゴリ (${topCategory.name})</div>
         </div>
     `;
+}
+
+export function calculateTopAuthors(readPapers, limit = 10) {
+    const authorData = {};
+    readPapers.forEach(p => {
+        const category = p.category || '未分類';
+        if (p.authors) {
+            p.authors.forEach(author => {
+                if (!authorData[author.name]) {
+                    authorData[author.name] = { count: 0, categories: {} };
+                }
+                authorData[author.name].count++;
+                authorData[author.name].categories[category] = (authorData[author.name].categories[category] || 0) + 1;
+            });
+        }
+    });
+    const sortedAuthors = Object.entries(authorData).sort(([,a],[,b]) => b.count-a.count).slice(0, limit);
+    return sortedAuthors.map(([name, data]) => {
+        const topCategory = Object.entries(data.categories).sort(([,a],[,b]) => b-a)[0][0];
+        return { name, count: data.count, topCategory };
+    });
 }
 
 function renderDetailedStats() {
@@ -121,31 +158,16 @@ function renderDetailedStats() {
         options: { scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
     });
 
-    const authorData = {};
-    readPapers.forEach(p => {
-        const category = p.category || '未分類';
-        if (p.authors) {
-            p.authors.forEach(author => {
-                if (!authorData[author.name]) {
-                    authorData[author.name] = { count: 0, categories: {} };
-                }
-                authorData[author.name].count++;
-                authorData[author.name].categories[category] = (authorData[author.name].categories[category] || 0) + 1;
-            });
-        }
-    });
-    const sortedAuthors = Object.entries(authorData).sort(([,a],[,b]) => b.count-a.count).slice(0, 10);
-    
+    const topAuthors = calculateTopAuthors(readPapers);
     const topAuthorsContainer = document.getElementById('top-authors-container');
-    topAuthorsContainer.innerHTML = sortedAuthors.map(([name, data], index) => {
-        const topCategory = Object.entries(data.categories).sort(([,a],[,b]) => b-a)[0][0];
+    topAuthorsContainer.innerHTML = topAuthors.map((author, index) => {
         return `
             <div class="flex justify-between items-center py-1.5 border-b border-[var(--border-color)]">
                 <div>
-                    <p class="font-semibold">${index + 1}. ${name}</p>
-                    <p class="text-xs text-[var(--muted-foreground)]">${topCategory}</p>
+                    <p class="font-semibold">${index + 1}. ${author.name}</p>
+                    <p class="text-xs text-[var(--muted-foreground)]">${author.topCategory}</p>
                 </div>
-                <span class="font-bold text-lg text-[var(--primary-color)]">${data.count}</span>
+                <span class="font-bold text-lg text-[var(--primary-color)]">${author.count}</span>
             </div>`;
     }).join('') || `<p class="text-center text-[var(--muted-foreground)]">データがありません。</p>`;
 }
